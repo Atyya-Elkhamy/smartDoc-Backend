@@ -36,7 +36,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 # -------------------------------------------------------------------
 
-
 class CreateUserView(APIView):
     def get(self, request):
         users = User.objects.all()
@@ -55,7 +54,7 @@ class CreateUserView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def post(self, request):
         try:
             refresh_token = request.data["refresh"]
