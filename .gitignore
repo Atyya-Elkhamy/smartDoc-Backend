@@ -2,3 +2,4 @@
 **/.venv/
 **/migrations/*
 **/__pycache__/*
+migrations
