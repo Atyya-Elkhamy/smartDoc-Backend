@@ -34,13 +34,3 @@ class UserSerializer(serializers.ModelSerializer):
             password=validated_data["password"]
         )
     
-class ProjectSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    class Meta():
-        model = Project
-        fields = "__all__"
-    def validate(self, attrs):
-        return super().validate(attrs)
-    def create(self, validated_data):
-        return super().create(validated_data)
-    
