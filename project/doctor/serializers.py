@@ -6,14 +6,14 @@ from .models import Treatment
 class TreatmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Treatment
-        fields = ['diagnosis', 'treatment_plan', 'prescribed_medications', 'start_date', 'end_date', 'follow_up_date', 'notes']
+        fields = '__all__'
+        read_only_fields = ['patient']
 
     def create(self, validated_data):
         request = self.context['request']
         appointment = self.context['appointment']
         treatment = Treatment.objects.create(
             patient=appointment.patient,
-            doctor=request.user,
             **validated_data
         )
         return treatment
@@ -32,4 +32,4 @@ class PatientListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = ['id', 'patient_name', 'queue_number', 'expected_check_time', 'status']
+        fields = '__all__'

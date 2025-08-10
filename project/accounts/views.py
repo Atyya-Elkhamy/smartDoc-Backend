@@ -15,23 +15,42 @@ User = get_user_model()
 # login serializer and view 
 # --------------------------------------------------------------------
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-     def validate(self, attrs):
-        username = attrs.get("username")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'] = serializers.EmailField()
+        self.fields.pop(self.username_field)  # remove "username"
+
+    def validate(self, attrs):
+        email = attrs.get("email")
         password = attrs.get("password")
+
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({"username": "No user with this username."})
-        user = authenticate(username=username, password=password)
+            raise serializers.ValidationError({"email": "No user with this email."})
+
+        user = authenticate(username=user.username, password=password)
         if user is None:
             raise serializers.ValidationError({"password": "Incorrect password."})
-        data = super().validate(attrs)
+
+        data = super().validate({"username": user.username, "password": password})
+        data["token"] = data.pop("access")
         data["user"] = {
             "id": user.id,
             "username": user.username,
             "email": user.email,
+            "role": user.type,
         }
         return data
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token["email"] = user.email
+        token["role"] = user.type
+        return token
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 # -------------------------------------------------------------------
@@ -64,3 +83,10 @@ class LogoutView(APIView):
         except Exception:
             return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
+class PatientListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        patients = User.objects.filter(type=User.UserType.PATIENT)
+        serializer = UserSerializer(patients, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

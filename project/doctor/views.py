@@ -6,16 +6,17 @@ from patient.models import Appointment
 from .models import Treatment
 from .serializers import TreatmentCreateSerializer, AppointmentStatusSerializer, PatientListSerializer
 
-
 class CreateTreatmentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]  # Add IsDoctor custom permission later
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, appointment_id):
-        appointment = get_object_or_404(Appointment, id=appointment_id, doctor=request.user)
-        serializer = TreatmentCreateSerializer(data=request.data, context={'request': request, 'appointment': appointment})
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+        serializer = TreatmentCreateSerializer(
+            data=request.data,
+            context={'request': request, 'appointment': appointment}
+        )
         if serializer.is_valid():
-            treatment = serializer.save()
-            # Mark appointment as completed when treatment is added
+            serializer.save()
             appointment.status = Appointment.Status.COMPLETED
             appointment.save()
             return Response({"message": "Treatment added successfully"}, status=status.HTTP_201_CREATED)
@@ -25,8 +26,8 @@ class CreateTreatmentView(APIView):
 class ChangeAppointmentStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def patch(self, request, appointment_id):
-        appointment = get_object_or_404(Appointment, id=appointment_id, doctor=request.user)
+    def put(self, request, appointment_id):
+        appointment = get_object_or_404(Appointment, id=appointment_id)
         serializer = AppointmentStatusSerializer(appointment, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -41,8 +42,7 @@ class TodayPatientsListView(APIView):
         from django.utils.timezone import now
         today = now().date()
         appointments = Appointment.objects.filter(
-            doctor=request.user,
-            appointment_date=today
+            appointment_date=today, status=Appointment.Status.WAITING
         ).order_by('queue_number')
         serializer = PatientListSerializer(appointments, many=True)
         return Response(serializer.data)
@@ -52,8 +52,9 @@ class PatientHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, patient_id):
-        # All treatments & appointments for this patient with the current doctor
-        treatments = Treatment.objects.filter(patient_id=patient_id, doctor=request.user).order_by('-start_date')
+        treatments = Treatment.objects.filter(patient_id=patient_id).order_by('-start_date')
+        if not treatments.exists():
+            return Response({"message": "No history found for this patient"}, status=status.HTTP_404_NOT_FOUND)
         data = [
             {
                 "diagnosis": t.diagnosis,

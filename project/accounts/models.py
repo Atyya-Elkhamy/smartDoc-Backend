@@ -8,6 +8,7 @@ class User(AbstractUser):
     class UserType(models.TextChoices):
         PATIENT = 'patient', 'Patient'
         DOCTOR = 'doctor', 'Doctor'
+    email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
     gender = models.CharField(
         max_length=10,

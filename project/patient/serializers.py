@@ -6,34 +6,18 @@ from patient.models import Appointment
 class AppointmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
-        fields = [
-            'visit_reason',
-            'symptoms',
-            'diseases',
-            'treatments',
-            'symptom_start_date',
-            'has_visited_before',
-            'same_reason_as_before',
-            'has_allergy_or_sensitivity',
-            'allergy_details',
-            'queue_number'
+        fields = '__all__'
+        read_only_fields = [
+            'expected_check_time',
+            'status',
+            'appointment_date',
+            'queue_number',  # prevent manual setting
+            'patient',       # hide patient from input
         ]
-        read_only_fields = ['expected_check_time', 'status', 'appointment_date']
-
     def create(self, validated_data):
-        request = self.context['request']
-        patient = request.user
-        # Assign default doctor or select logic later
-        doctor = validated_data.get('doctor')
-        if not doctor:
-            raise serializers.ValidationError("Doctor is required.")
-
-        appointment = Appointment.objects.create(
-            patient=patient,
-            doctor=doctor,
-            **validated_data
-        )
-        return appointment
+        patient = self.context['request'].user
+        validated_data['patient'] = patient
+        return super().create(validated_data)
 
 
 class ExpectedTimeSerializer(serializers.ModelSerializer):
@@ -43,7 +27,6 @@ class ExpectedTimeSerializer(serializers.ModelSerializer):
 
 
 class TreatmentSerializer(serializers.ModelSerializer):
-    doctor_name = serializers.CharField(source='doctor.get_full_name', read_only=True)
 
     class Meta:
         model = Treatment
