@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import User
+from doctor.models import Treatment
 
 class Appointment(models.Model):
     class Status(models.TextChoices):
@@ -15,6 +16,7 @@ class Appointment(models.Model):
         limit_choices_to={'type': 'patient'},
         related_name="appointments"
     )
+    treatment = models.ForeignKey(Treatment,on_delete=models.SET_NULL,null=True,blank=True,related_name="appointments")
     visit_reason = models.TextField(help_text="Main reason for visit")
     symptoms = models.TextField(help_text="Symptoms described by patient")
     diseases = models.TextField(blank=True, null=True, help_text="Diagnosed diseases")
@@ -41,28 +43,25 @@ class Appointment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
     def calculate_expected_time(self, avg_minutes_per_patient=15):
-        start_time = timezone.datetime.combine(
-            self.appointment_date,
-            timezone.datetime.strptime("09:00", "%H:%M").time()
-        )
-        return (start_time + timedelta(
-            minutes=(self.queue_number - 1) * avg_minutes_per_patient
-        )).time()
+        now = timezone.now()
+        patients_ahead = Appointment.objects.filter(
+            appointment_date=self.appointment_date,
+            status=Appointment.Status.WAITING,
+            queue_number__lt=self.queue_number
+        ).count()
+        wait_time = timedelta(minutes=patients_ahead * avg_minutes_per_patient)
+        return (now + wait_time).time()
 
     def save(self, *args, **kwargs):
-        # Assign queue number automatically based on the day
         if not self.queue_number:
             last_appt = Appointment.objects.filter(
                 appointment_date=self.appointment_date
             ).order_by('-queue_number').first()
-
             self.queue_number = last_appt.queue_number + 1 if last_appt else 1
-
-        # Assign expected check time if not set
-        if not self.expected_check_time:
+        if self.status == Appointment.Status.WAITING:
             self.expected_check_time = self.calculate_expected_time()
-
         super().save(*args, **kwargs)
 
     class Meta:

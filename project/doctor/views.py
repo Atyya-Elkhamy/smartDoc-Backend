@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from patient.models import Appointment
 from .models import Treatment
-from .serializers import TreatmentCreateSerializer, AppointmentStatusSerializer, PatientListSerializer
+from .serializers import *
+from time import timezone
 
 class CreateTreatmentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -13,13 +14,17 @@ class CreateTreatmentView(APIView):
         appointment = get_object_or_404(Appointment, id=appointment_id)
         serializer = TreatmentCreateSerializer(
             data=request.data,
-            context={'request': request, 'appointment': appointment}
+            context={
+                "request": request,
+                "appointment": appointment
+            }
         )
         if serializer.is_valid():
             serializer.save()
-            appointment.status = Appointment.Status.COMPLETED
-            appointment.save()
-            return Response({"message": "Treatment added successfully"}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Treatment added successfully"},
+                status=status.HTTP_201_CREATED
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

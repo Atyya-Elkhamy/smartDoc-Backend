@@ -15,7 +15,7 @@ class User(AbstractUser):
         choices=[('male', 'Male'), ('female', 'Female')],
         null=True, blank=True
     )
-    date_of_birth = models.DateField(null=True, blank=True)
+    age = models.PositiveIntegerField(null=True, blank=True, editable=False)
     address = models.TextField(null=True, blank=True)
     profile_image = models.ImageField(upload_to='users/', null=True, blank=True)
     type = models.CharField(
@@ -23,19 +23,19 @@ class User(AbstractUser):
         choices=UserType.choices,
         default=UserType.PATIENT
     )
-    @property
-    def age(self):
-        if not self.date_of_birth:
-            return None
-        today = date.today()
-        return (
-            today.year - self.date_of_birth.year -
-            ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
-        )
     def save(self, *args, **kwargs):
+        if self.date_of_birth:
+            today = date.today()
+            self.age = (
+                today.year - self.date_of_birth.year -
+                ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
+            )
+        else:
+            self.age = None
+        # Force type for superusers
         if self.is_superuser:
             self.type = self.UserType.DOCTOR
+
         super().save(*args, **kwargs)
-        
     class Meta:
         db_table = 'accounts'
