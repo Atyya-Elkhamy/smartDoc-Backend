@@ -1,13 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
-from datetime import date
 
 
 class User(AbstractUser):
     class UserType(models.TextChoices):
         PATIENT = 'patient', 'Patient'
         DOCTOR = 'doctor', 'Doctor'
+
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
     gender = models.CharField(
@@ -26,3 +25,11 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'accounts'
+
+    def assign_type_for_superuser(self):
+        if self.is_superuser:
+            self.type = self.UserType.DOCTOR
+
+    def save(self, *args, **kwargs):
+        self.assign_type_for_superuser()
+        super().save(*args, **kwargs)
