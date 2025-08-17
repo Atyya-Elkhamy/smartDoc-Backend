@@ -42,20 +42,15 @@ class PatientTreatmentsView(APIView):
         serializer = TreatmentSerializer(appointment.treatment)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-class PatientAppointmentsView(generics.ListAPIView):
+class PatientAppointmentsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = AppointmentDetailSerializer
 
-    def get_queryset(self):
-        if not hasattr(self.request.user, "is_patient") or not self.request.user.is_patient:
-            return Appointment.objects.none()
-        return Appointment.objects.filter(
-            patient=self.request.user
+    def get(self, request):
+        appointments = Appointment.objects.filter(
+            patient=request.user
         ).order_by('-appointment_date')
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = AppointmentDetailSerializer(appointments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class AppointmentUpdateView(APIView):
