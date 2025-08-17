@@ -44,15 +44,17 @@ class Appointment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-    def calculate_expected_time(self, avg_minutes_per_patient=15):
-        now = timezone.now()
+    def calculate_expected_time(self, avg_minutes_per_patient=15, base_time=None):
+        if base_time is None:
+            base_time = timezone.localtime(timezone.now())
+        print(base_time)
         patients_ahead = Appointment.objects.filter(
             appointment_date=self.appointment_date,
             status=Appointment.Status.WAITING,
             queue_number__lt=self.queue_number
         ).count()
         wait_time = timedelta(minutes=patients_ahead * avg_minutes_per_patient)
-        return (now + wait_time).time()
+        return base_time + wait_time
 
     def save(self, *args, **kwargs):
         if not self.queue_number:
