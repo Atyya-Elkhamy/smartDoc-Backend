@@ -1,4 +1,4 @@
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -42,19 +42,20 @@ class PatientTreatmentsView(APIView):
         serializer = TreatmentSerializer(appointment.treatment)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-class PatientAppointmentsView(APIView):
+class PatientAppointmentsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AppointmentDetailSerializer
 
-    def get(self, request):
-        appointments = Appointment.objects.filter(
-            patient=request.user
+    def get_queryset(self):
+        if not hasattr(self.request.user, "is_patient") or not self.request.user.is_patient:
+            return Appointment.objects.none()
+        return Appointment.objects.filter(
+            patient=self.request.user
         ).order_by('-appointment_date')
-        if not appointments.exists():
-            return Response(
-                {"message": "No appointments found for this patient."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        serializer = AppointmentDetailSerializer(appointments, many=True)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class AppointmentUpdateView(APIView):
