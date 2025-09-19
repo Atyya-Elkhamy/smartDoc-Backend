@@ -18,10 +18,11 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-$$7c&k*6ce&g5=myyz8e9-z7mwx&5b_pf9crq=bj5j9w^mykm#'
-DEBUG = True
-ALLOWED_HOSTS = []
-
+SECRET_KEY = os.getenv("SECRET_KEY")
+# DEBUG = os.getenv("DEBUG") == "1"
+DEBUG = False
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS").split(" ")
+SECURE_SSL_REDIRECT = False
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
 
     'accounts',
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -75,11 +78,11 @@ WSGI_APPLICATION = 'project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'clinic',
-        'USER': 'postgres',
-        'PASSWORD': 'atia123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv("POSTGRES_DB"),
+        'USER': os.getenv("POSTGRES_USER"),
+        'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
+        'HOST': os.getenv("POSTGRES_HOST"),
+        'PORT': os.getenv("POSTGRES_PORT"),
     }
 }
 
@@ -130,7 +133,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 AUTH_USER_MODEL = 'accounts.User'
 
 # Static & Media files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -139,3 +143,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TIME_ZONE = "Africa/Cairo"
 USE_TZ = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://localhost:8080",
+]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
